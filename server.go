@@ -30,46 +30,84 @@ func (a *App) Initialize() {
 
 	prefix := "/api"
 
+	http.HandleFunc(prefix+"/posts", a.GetAllPosts)
 	http.HandleFunc(prefix+"/post", a.Handler)
 }
 
+func (a *App) GetAllPosts(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	posts, err := a.GetAllPost()
+	if err != nil {
+		JSONResponse(w, http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
+		return
+	}
+	JSONResponse(w, http.StatusOK, posts)
+}
+
 func (a *App) Handler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	switch r.Method {
 	case "GET":
-		postId, _ := r.URL.Query()["post"]
-		if postId == "" {
-			posts, err := a.GetAllPost()
-			if err != nil {
-				JSONResponse(w, http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
-				return
-			}
-			JSONResponse(w, http.StatusOK, posts)
+		key, ok := r.URL.Query()["post"]
+		if !ok {
+			JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "no post specified"})
 			return
 		}
+		postId := key[0]
 		post, err := a.GetSinglePost(postId)
 		if err != nil {
 			JSONResponse(w, http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
 			return
 		}
+		JSONResponse(w, http.StatusOK, post)
 
 	case "POST":
-		w.WriteHeader(http.StatusCreated)
-
+		var post Post
+		decoder := json.NewDecoder(r.Body)
+		err := decoder.Decode(&post)
+		if err != nil {
+			JSONResponse(w, http.StatusBadRequest, map[string]interface{}{"error": err.Error()})
+			return
+		}
+		_, err = a.CreatePost(post)
+		if err != nil {
+			JSONResponse(w, http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
+			return
+		}
+		JSONResponse(w, http.StatusCreated, nil)
 	case "PUT":
-		w.WriteHeader(http.StatusAccepted)
-		postId, ok := r.URL.Query()["post"]
+		key, ok := r.URL.Query()["post"]
 		if !ok {
 			JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "no post specified"})
 			return
 		}
-
+		postId := key[0]
+		var post Post
+		decoder := json.NewDecoder(r.Body)
+		err := decoder.Decode(&post)
+		if err != nil {
+			JSONResponse(w, http.StatusBadRequest, map[string]interface{}{"error": err.Error()})
+			return
+		}
+		_, err = a.UpdatePost(postId, post.Content)
+		if err != nil {
+			JSONResponse(w, http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
+			return
+		}
+		JSONResponse(w, http.StatusCreated, nil)
 	case "DELETE":
-		w.WriteHeader(http.StatusOK)
-		postId, ok := r.URL.Query()["post"]
+		key, ok := r.URL.Query()["post"]
 		if !ok {
 			JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "no post specified"})
 			return
 		}
+		postId := key[0]
+		_, err := a.DeletePost(postId)
+		if err != nil {
+			JSONResponse(w, http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
+			return
+		}
+		JSONResponse(w, http.StatusOK, nil)
 
 	default:
 		w.WriteHeader(http.StatusNotFound)
