@@ -47,7 +47,7 @@ func (a *App) GetAllPosts(w http.ResponseWriter, r *http.Request) {
 func (a *App) Handler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	switch r.Method {
-	case "GET":
+	case http.MethodGet:
 		key, ok := r.URL.Query()["post"]
 		if !ok {
 			JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "no post specified"})
@@ -61,7 +61,7 @@ func (a *App) Handler(w http.ResponseWriter, r *http.Request) {
 		}
 		JSONResponse(w, http.StatusOK, post)
 
-	case "POST":
+	case http.MethodPost:
 		var post Post
 		decoder := json.NewDecoder(r.Body)
 		err := decoder.Decode(&post)
@@ -75,7 +75,7 @@ func (a *App) Handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		JSONResponse(w, http.StatusCreated, nil)
-	case "PUT":
+	case http.MethodPut:
 		key, ok := r.URL.Query()["post"]
 		if !ok {
 			JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "no post specified"})
@@ -95,7 +95,7 @@ func (a *App) Handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		JSONResponse(w, http.StatusCreated, nil)
-	case "DELETE":
+	case http.MethodDelete:
 		key, ok := r.URL.Query()["post"]
 		if !ok {
 			JSONResponse(w, http.StatusBadRequest, map[string]string{"error": "no post specified"})
